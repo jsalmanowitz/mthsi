@@ -53,3 +53,4 @@ utils/__pycache__/eigencomp.cpython-313.pyc
 utils/__pycache__/read.cpython-313.pyc
 tanager_native_stacker.py
 tanager_native_viewer.py
+Tanager_STAC-imagery-downloader.py
