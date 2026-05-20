@@ -1,17 +1,19 @@
 #%% utils
 # package imports
 import pandas as pd
+import numpy as np
 from datetime import datetime
+import matplotlib.pyplot as plt
 # custom code imports
 import utils.read as read
 import utils.eigencomp as eigencomp
 
 #%% read-in file names for test read
-shots_path = r"./data/tanager/city_shots/"
+shots_path = r"./data/tanager/lake_shots/"
 tanager_files = read.getFiles(shots_path)
 
 # %% test read in files to find crops
-file = tanager_files[6]
+file = tanager_files[1]
 cubeTest = read.getHyperspectralCube('tanager',shots_path,fr"{file}")
 slicedCubeTest = read.sliceCube(cubeTest,[74,94,455,485])
 # %% test plot cubes to find crops
@@ -30,13 +32,14 @@ for file in tanager_lake_files:
 
 # %% slice to forest data for lake shots
 slice_info_lake = {
-    "20250903_164714_08_4001_ortho_sr_hdf5.h5": [500,550,400,460],
+    "20250903_164714_08_4001_ortho_sr_hdf5.h5": [520,570,400,460],
     "20250919_170233_04_4001_ortho_sr_hdf5.h5": [530,580,370,430],
     "20251001_165049_07_4001_ortho_sr_hdf5.h5": [530,580,350,410],
     "20251015_165255_92_4001_ortho_sr_hdf5.h5": [610,660,540,600],
     "20251029_165455_83_4001_ortho_sr_hdf5.h5": [600,650,540,600],
 }
 
+labels = ['Week 0','Week 2', 'Week 4', 'Week 6', 'Week 8']
 slice_cubes_lake = {}
 for image in [*cubeDictLake.keys()]:
     cubeData = cubeDictLake[image]
@@ -44,6 +47,93 @@ for image in [*cubeDictLake.keys()]:
     slicedCubeData = read.sliceCube(cubeData,slice_data)
     read.plotRGB(slicedCubeData)
     slice_cubes_lake[image] = slicedCubeData
+
+#%% analyze spectra of cubes?
+
+labels = ['Week 0','Week 2', 'Week 4', 'Week 6', 'Week 8']
+
+plt.figure
+i = 0
+for time in [*slice_cubes_lake.keys()]:
+    cube = slice_cubes_lake[time]['cube']
+    flat_cube = np.concatenate(cube,axis=0)
+    print(np.shape(flat_cube))
+
+    avg_spectra = np.mean(flat_cube,axis=0)
+    std_specta = np.std(flat_cube,axis=0)
+    wavelength = slice_cubes_lake[time]['wavelengths']
+
+    plt.plot(wavelength,avg_spectra,label=labels[i])
+    i += 1
+
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Reflectance')
+plt.legend()
+
+i = 0
+for time in [*slice_cubes_lake.keys()]:
+    if i % 2 == 0:
+        cube = slice_cubes_lake[time]['cube']
+        flat_cube = np.concatenate(cube,axis=0)
+        print(np.shape(flat_cube))
+
+        avg_spectra = np.mean(flat_cube,axis=0)
+        std_specta = np.std(flat_cube,axis=0)
+        wavelength = slice_cubes_lake[time]['wavelengths']
+
+        plt.figure()
+        plt.plot(wavelength,avg_spectra,label=labels[i])
+        plt.fill_between(wavelength,avg_spectra-std_specta,avg_spectra+std_specta,alpha=0.2)
+        plt.xlabel('Wavelength [nm]')
+        plt.ylabel('Reflectance')
+        plt.title(time)
+    i += 1
+
+#%%
+def getNDVI(cubeData,mode='image'):
+    cube = cubeData['cube']
+    wavelength = cubeData['wavelengths']
+    index860 = ((wavelength-860) > 0).argmax()
+    index660 = ((wavelength-660) > 0).argmax()
+
+    ndvi = (cube[:,:,index860]-cube[:,:,index660])/(cube[:,:,index860]+cube[:,:,index660])
+    
+    if mode == 'image':
+        return ndvi
+    elif mode == 'list':
+        return np.concatenate(ndvi)
+
+labels = ['Week 0','Week 2', 'Week 4', 'Week 6', 'Week 8']
+
+avg_ndvi_list = []
+std_ndvi_list = []
+max_ndvi_list = []
+min_ndvi_list = []
+
+i = 0
+ndvi_dict = {}
+for time in [*slice_cubes_lake.keys()]:
+    cubeData = slice_cubes_lake[time]
+    ndvi = getNDVI(cubeData,mode='list')
+
+    ndvi_dict[labels[i]] = ndvi
+
+    avg_ndvi = np.mean(ndvi)
+    std_ndvi = np.std(ndvi)
+    max_ndvi = np.max(ndvi)
+    min_ndvi = np.min(ndvi)
+
+    i += 1
+
+
+fig, ax = plt.subplots()
+ax.boxplot(ndvi_dict.values())
+ax.set_xticklabels(ndvi_dict.keys())
+ax.set_ylabel('NDVI')
+
+
+
+
 
 #%% Automated read-in of all files for city shots
 city_shots_path = r"./data/tanager/city_shots/"

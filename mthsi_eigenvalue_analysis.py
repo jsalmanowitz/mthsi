@@ -36,7 +36,7 @@ veg_lle_eigens = veg_lle_dict['Eigenvalues']
 veg_pca_eigens = veg_pca_dict['Eigenvalues']
 
 #%%
-mode = 'start'
+mode = 'diff'
 
 # for veg scenes
 match mode:
@@ -75,5 +75,31 @@ for metric in ['sam','euclidean','manhattan']:
     plt.ylabel(f'Change from {mode} of {metric} distance')
     plt.legend()
 
+
+# %%
+
+time_dict = {
+    'ISOMAP': veg_isomap_eigens,
+    'Laplacian Eigenmaps': veg_laplacian_eigens,
+    'LLE': veg_lle_eigens,
+    'PCA': veg_pca_eigens,
+
+}
+
+labels = ['Week 0','Week 2','Week 4','Week 6','Week 8']
+
+for emb in [*time_dict.keys()]:
+    time = [0,2,4,6,8]
+    plt.figure()
+    i = 0
+    for eigens in time_dict[emb]:
+        plt.plot(eigens,label=labels[i])
+        i+=1
+    if emb != 'LLE':
+        plt.yscale('log')
+    plt.xlabel('Eigenvalue Index')
+    plt.ylabel('Eigenvalue Magnitude')
+    plt.title(f"{emb} Eigenvalues")
+    plt.legend()
 
 # %%
