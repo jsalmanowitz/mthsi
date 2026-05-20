@@ -60,7 +60,7 @@ def getHyperspectralCube(sensor,file_path,file_name,header_name=None):
                 reflectance = np.swapaxes(reflectance,1,2)
                 reflectance_masked = reflectance*cloud_mask[:,:,np.newaxis]*cirrus_mask[:,:,np.newaxis],
                 return {
-            'cube': reflectance_masked[0][::,:-5],
+            'cube': reflectance_masked[0][:,:,:-5],
             'wavelengths': wavelengths[:-5],
             'file_name': file_name,
             'cirrus_mask': cirrus_mask,
