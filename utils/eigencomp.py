@@ -27,7 +27,7 @@ def sort_mthsi_df(df):
         vals_list += [vals]
     return {'Dates': date_list, 'Eigenvalues': np.array(vals_list)}
 
-def get_metrics_from_list(eigen_list,metric):
+def get_metrics_from_list(eigen_list,metric,mode='diff'):
 
     def get_cos_sim(eigen_list_left,eigen_list_right):
         cos_vals = []
@@ -50,10 +50,26 @@ def get_metrics_from_list(eigen_list,metric):
         diff = eigen_list_left-eigen_list_right
         return np.sum(abs(diff),axis=1)[1:-1]
 
-    nan_array = np.full(len(eigen_list[0]), np.nan)
-    nan_array = nan_array[np.newaxis,:]
-    eigen_list_left = np.concatenate([nan_array,eigen_list])
-    eigen_list_right = np.concatenate([eigen_list,nan_array])
+    if mode == 'diff':
+        nan_array = np.full(len(eigen_list[0]), np.nan)
+        nan_array = nan_array[np.newaxis,:]
+        eigen_list_left = np.concatenate([nan_array,eigen_list])
+        eigen_list_right = np.concatenate([eigen_list,nan_array])
+    elif mode == 'start':
+        start_array = np.full(len(eigen_list[0]), eigen_list[0])
+        start_array = start_array[np.newaxis,:]
+        eigen_list_left = np.concatenate([start_array,eigen_list])
+        eigen_list_right = start_array
+        for i in range(len(eigen_list)):
+            eigen_list_right = np.concatenate([eigen_list_right,start_array])
+
+    elif mode == 'end':
+        end_array = np.full(len(eigen_list[0]), eigen_list[0])
+        end_array = start_array[np.newaxis,:]
+        eigen_list_left = np.concatenate([end_array,eigen_list])
+        eigen_list_right = end_array
+        for i in range(len(eigen_list[1])):
+            eigen_list_right = np.concatenate([eigen_list_right,end_array])
 
     if metric == 'cosine':
         return get_cos_sim(eigen_list_left,eigen_list_right)
