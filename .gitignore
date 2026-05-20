@@ -51,3 +51,5 @@ results/gsd_eigenvalues_lle_scaled_2.csv
 results/gsd_eigenvalues_lle.csv
 utils/__pycache__/eigencomp.cpython-313.pyc
 utils/__pycache__/read.cpython-313.pyc
+tanager_native_stacker.py
+tanager_native_viewer.py
