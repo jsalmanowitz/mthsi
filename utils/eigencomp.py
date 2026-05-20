@@ -36,7 +36,7 @@ def get_metrics_from_list(eigen_list,metric,mode='diff'):
             vec2 = eigen_list_right[index]
             cos_sim = np.dot(vec1,vec2)/(np.linalg.norm(vec1)*np.linalg.norm(vec2))
             cos_vals += [cos_sim]
-        return np.array(cos_vals[1:-1])
+        return np.array(cos_vals)
     
     def get_sam(eigen_list_left,eigen_list_right):
         cos_sim = get_cos_sim(eigen_list_left,eigen_list_right)
@@ -44,32 +44,34 @@ def get_metrics_from_list(eigen_list,metric,mode='diff'):
     
     def get_euclidean(eigen_list_left,eigen_list_right):
         diff = eigen_list_left-eigen_list_right
-        return np.linalg.norm(diff,axis=1)[1:-1]
+        return np.linalg.norm(diff,axis=1)
     
     def get_manhattan(eigen_list_left,eigen_list_right):
         diff = eigen_list_left-eigen_list_right
-        return np.sum(abs(diff),axis=1)[1:-1]
+        return np.sum(abs(diff),axis=1)
 
     if mode == 'diff':
         nan_array = np.full(len(eigen_list[0]), np.nan)
         nan_array = nan_array[np.newaxis,:]
-        eigen_list_left = np.concatenate([nan_array,eigen_list])
-        eigen_list_right = np.concatenate([eigen_list,nan_array])
+        eigen_list_left = np.concatenate([nan_array,eigen_list])[1:-1]
+        eigen_list_right = np.concatenate([eigen_list,nan_array])[1:-1]
     elif mode == 'start':
-        start_array = np.full(len(eigen_list[0]), eigen_list[0])
+        start_array = eigen_list[0]
         start_array = start_array[np.newaxis,:]
-        eigen_list_left = np.concatenate([start_array,eigen_list])
+        eigen_list_left = eigen_list
         eigen_list_right = start_array
-        for i in range(len(eigen_list)):
+        for i in range(len(eigen_list)-1):
             eigen_list_right = np.concatenate([eigen_list_right,start_array])
-
     elif mode == 'end':
-        end_array = np.full(len(eigen_list[0]), eigen_list[0])
-        end_array = start_array[np.newaxis,:]
-        eigen_list_left = np.concatenate([end_array,eigen_list])
+        end_array = eigen_list[-1]
+        end_array = end_array[np.newaxis,:]
+        eigen_list_left = eigen_list
         eigen_list_right = end_array
-        for i in range(len(eigen_list[1])):
+        for i in range(len(eigen_list)-1):
             eigen_list_right = np.concatenate([eigen_list_right,end_array])
+    else:
+        print('Mode does not exist.')
+        return None
 
     if metric == 'cosine':
         return get_cos_sim(eigen_list_left,eigen_list_right)
