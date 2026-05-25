@@ -35,7 +35,7 @@ slice_info_lake = {
     "20250903_164714_08_4001_ortho_sr_hdf5.h5": [520,570,400,460],
     "20250919_170233_04_4001_ortho_sr_hdf5.h5": [530,580,370,430],
     "20251001_165049_07_4001_ortho_sr_hdf5.h5": [530,580,350,410],
-    "20251015_165255_92_4001_ortho_sr_hdf5.h5": [610,660,540,600],
+    "20251015_165255_92_4001_ortho_sr_hdf5.h5": [615,665,540,600],
     "20251029_165455_83_4001_ortho_sr_hdf5.h5": [600,650,540,600],
 }
 
@@ -130,9 +130,6 @@ fig, ax = plt.subplots()
 ax.boxplot(ndvi_dict.values())
 ax.set_xticklabels(ndvi_dict.keys())
 ax.set_ylabel('NDVI')
-
-
-
 
 
 #%% Automated read-in of all files for city shots
@@ -235,4 +232,195 @@ pca_eigendata_city.to_csv('city_pca_eigenvalues.csv', index=False)
 end = datetime.now()
 print(end)
 print(f"Total elapsed time: {end-start}")
+# %%
+
+from sklearn.manifold import Isomap
+from sklearn.decomposition import PCA
+
+allCubeDataVeg = []
+for image in [*slice_cubes_lake.keys()]:
+    cube = slice_cubes_lake[image]['cube']
+    flat_cube = np.concatenate(cube,axis=0)
+    #flat_cube_partial = flat_cube[0:int(len(flat_cube)/2)]
+    flat_cube_partial = flat_cube
+    allCubeDataVeg += [flat_cube_partial]
+
+allCubeDataVeg = np.array(allCubeDataVeg)
+allCubeDataVeg = allCubeDataVeg[2::]
+allCubeDataVeg = np.concatenate(allCubeDataVeg,axis=0)
+print(np.shape(allCubeDataVeg))
+
+#%% reshape test
+
+reg_day1 = allCubeDataVeg[0:3000]
+reg_day2 = allCubeDataVeg[3000:6000]
+reg_day3 = allCubeDataVeg[6000::]
+
+reg_day1_reshape = np.reshape(reg_day1,(50,60,421),order='C')
+reg_day2_reshape = np.reshape(reg_day2,(50,60,421),order='C')
+reg_day3_reshape = np.reshape(reg_day3,(50,60,421),order='C')
+
+def plotRGBReshape(cube,wavelengths):
+
+    wvl = wavelengths
+
+    rIndex = ((wvl-650) > 0).argmax()
+    gIndex = ((wvl-550) > 0).argmax()
+    bIndex = ((wvl-450) > 0).argmax()
+
+    rData = cube[:,:,rIndex]
+    gData = cube[:,:,gIndex]
+    bData = cube[:,:,bIndex]
+
+    colorData = np.array([rData,gData,bData])
+    # normalize
+    colorMax = np.max(np.concatenate(np.concatenate(colorData)))
+    colorImage = colorData/colorMax
+
+    colorImage = colorImage.swapaxes(0,2)
+
+    fig = plt.figure()
+    plt.imshow(colorImage)
+    plt.show()
+
+plotRGBReshape(reg_day1_reshape,slice_cubes_lake[image]['wavelengths'])
+
+#%%
+iso = Isomap(n_neighbors=300,n_components=100,metric='euclidean')
+iso_fit = iso.fit_transform(allCubeDataVeg)
+
+#%%
+pca = PCA(n_components=100)
+pca_fit = pca.fit_transform(allCubeDataVeg)
+#%%
+fit_day1 = iso_fit[0:3000]
+fit_day2 = iso_fit[3000:6000]
+fit_day3 = iso_fit[6000::]
+
+pfit_day1 = pca_fit[0:3000]
+pfit_day2 = pca_fit[3000:6000]
+pfit_day3 = pca_fit[6000::]
+
+#%% Plot Isomap and PCA slices
+
+start = 3
+plt.figure(1)
+plt.scatter(fit_day1[:,start],fit_day1[:,start+1],label='Week 0')
+plt.scatter(fit_day2[:,start],fit_day2[:,start+1],label = 'Week 2')
+plt.scatter(fit_day3[:,start],fit_day3[:,start+1],label = 'Week 4')
+plt.legend()
+#plt.title('Isomap of Data from Both Days Fit To 08/10 Isomap')
+plt.xlabel(f'Latent Dimension {start} (X)')
+plt.ylabel(f'Latent Dimension {start+1} (Y)')
+plt.title('ISOMAP')
+plt.show()
+
+plt.figure(2)
+plt.scatter(pfit_day1[:,start],pfit_day1[:,start+1],label='Week 0')
+plt.scatter(pfit_day2[:,start],pfit_day2[:,start+1],label = 'Week 2')
+plt.scatter(pfit_day3[:,start],pfit_day3[:,start+1],label = 'Week 4')
+plt.legend()
+#plt.title('Isomap of Data from Both Days Fit To 08/10 Isomap')
+plt.xlabel(f'Principal Component {start} (X)')
+plt.ylabel(f'Principal Component {start+1} (Y)')
+plt.title('PCA')
+plt.show()
+
+
+
+# 0, 1,2,4,5?
+
+# dimensions 2 and 3 are pretty separable
+# need to figure out how to reshape array into workable image!
+# I think with numpy reshape this will work if you use the spectra as the first value? Test on regular flat array first to see if it looks right
+# %%
+
+fit_day1_reshape = np.reshape(fit_day1,(50,60,100),order='C')
+fit_day2_reshape = np.reshape(fit_day2,(50,60,100),order='C')
+fit_day3_reshape = np.reshape(fit_day3,(50,60,100),order='C')
+
+pfit_day1_reshape = np.reshape(pfit_day1,(50,60,100),order='C')
+pfit_day2_reshape = np.reshape(pfit_day2,(50,60,100),order='C')
+pfit_day3_reshape = np.reshape(pfit_day3,(50,60,100),order='C')
+
+def plotFalseColorEmbedding(emb_cube,dims=(0,1,2)):
+    colorData = np.array([emb_cube[:,:,dims[0]],emb_cube[:,:,dims[1]],emb_cube[:,:,dims[2]]])
+    # normalize
+    colorMin = np.min(np.concatenate(np.concatenate(colorData)))
+    colorData = colorData + abs(colorMin)
+    colorMax = np.max(np.concatenate(np.concatenate(colorData)))
+    colorImage = colorData/colorMax
+    colorImage = np.swapaxes(colorImage,0,2)
+    #colorImage = np.swapaxes(colorImage,0,1)
+    fig = plt.figure()
+    plt.imshow(colorImage)
+    plt.show()
+
+#%%
+
+dims = (2,4,5)
+
+print('ISOMAP')
+for fit in [fit_day1_reshape,fit_day2_reshape,fit_day3_reshape]:
+    plotFalseColorEmbedding(fit,dims=dims)
+print('PCA')
+for fit in [pfit_day1_reshape,pfit_day2_reshape,pfit_day3_reshape]:
+    plotFalseColorEmbedding(fit,dims=dims)
+
+# %% make my big jumbo plot for my paper
+
+rgb_fits = [
+    reg_day1_reshape,
+    reg_day2_reshape,
+    reg_day3_reshape,
+    pfit_day1_reshape,
+    pfit_day2_reshape,
+    pfit_day3_reshape,
+    fit_day1_reshape,
+    fit_day2_reshape,
+    fit_day3_reshape,
+]
+
+wvl=cubeData['wavelengths']
+rIndex = ((wvl-650) > 0).argmax()
+gIndex = ((wvl-550) > 0).argmax()
+bIndex = ((wvl-450) > 0).argmax()
+
+dims = (2,4,5)
+
+rgb_images = []
+for img in rgb_fits:
+    if np.shape(img)[2] < 421:
+        colorData = np.array([img[:,:,dims[0]],img[:,:,dims[1]],img[:,:,dims[2]]])
+    else:
+        colorData = np.array([img[:,:,rIndex],img[:,:,gIndex],img[:,:,bIndex]])
+    # normalize
+    colorMin = np.min(np.concatenate(np.concatenate(colorData)))
+    if colorMin < 0:
+        colorData = colorData + abs(colorMin)
+    colorMax = np.max(np.concatenate(np.concatenate(colorData)))
+    colorData = colorData/colorMax
+    colorImage = np.swapaxes(colorData,0,2)
+    rgb_images += [colorImage]
+
+fig, axs = plt.subplots(3, 3)
+i = 0
+panel_font = {'family': 'serif', 'size': 12,'name': 'Times New Roman'}
+
+for rgb_img in rgb_images:
+    plt.tick_params(labelbottom=False, labelleft=False)
+    axs[int(i/3) % 3, i % 3].imshow(rgb_img)
+    axs[int(i/3) % 3, i % 3].set_xticklabels([])
+    axs[int(i/3) % 3, i % 3].set_yticklabels([])
+    axs[int(i/3) % 3, i % 3].set_xticks([])
+    axs[int(i/3) % 3, i % 3].set_yticks([])
+    axs[int(i/3) % 3, i % 3].text(0.65, -0.175, f'({chr(97+i)})', transform=axs[int(i/3) % 3, i % 3].transAxes, 
+            fontdict=panel_font, va='bottom', ha='right')
+
+    i += 1
+
+#plt.tight_layout()
+fig.subplots_adjust(wspace=-0.6, hspace=0.2)
+fig.show()
+fig.savefig('false_color.png', dpi=300, bbox_inches='tight') 
 # %%
