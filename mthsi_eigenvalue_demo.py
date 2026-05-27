@@ -373,6 +373,9 @@ rgb_fits = [
     reg_day1_reshape,
     reg_day2_reshape,
     reg_day3_reshape,
+    reg_day1_reshape,
+    reg_day2_reshape,
+    reg_day3_reshape,
     pfit_day1_reshape,
     pfit_day2_reshape,
     pfit_day3_reshape,
@@ -386,41 +389,73 @@ rIndex = ((wvl-650) > 0).argmax()
 gIndex = ((wvl-550) > 0).argmax()
 bIndex = ((wvl-450) > 0).argmax()
 
+frIndex = ((wvl-860) > 0).argmax()
+fgIndex = ((wvl-660) > 0).argmax()
+fbIndex = ((wvl-560) > 0).argmax()
+
 dims = (2,4,5)
 
+perBand = True
+
 rgb_images = []
+i = 0
 for img in rgb_fits:
     if np.shape(img)[2] < 421:
         colorData = np.array([img[:,:,dims[0]],img[:,:,dims[1]],img[:,:,dims[2]]])
     else:
-        colorData = np.array([img[:,:,rIndex],img[:,:,gIndex],img[:,:,bIndex]])
+        if i < 3:
+            colorData = np.array([img[:,:,rIndex],img[:,:,gIndex],img[:,:,bIndex]])
+            perBand = False
+        else:
+            colorData = np.array([img[:,:,frIndex],img[:,:,fgIndex],img[:,:,fbIndex]])
+            perBand = True
     # normalize
     colorMin = np.min(np.concatenate(np.concatenate(colorData)))
     if colorMin < 0:
         colorData = colorData + abs(colorMin)
-    colorMax = np.max(np.concatenate(np.concatenate(colorData)))
-    colorData = colorData/colorMax
-    colorImage = np.swapaxes(colorData,0,2)
+    if perBand:
+        colorDataNorm = []
+        for color in colorData:
+            colorNorm = color/np.max(np.concatenate(color))
+            colorDataNorm += [colorNorm]
+        colorDataNorm = np.array(colorDataNorm)
+    else:
+        colorMax = np.max(np.concatenate(np.concatenate(colorData)))
+        # fix normalization procedure for color max to do it per band?
+        colorDataNorm = colorData/colorMax
+    colorImage = np.swapaxes(colorDataNorm,0,2)
     rgb_images += [colorImage]
+    i += 1
 
-fig, axs = plt.subplots(3, 3)
+#%%
+
+in1 = 3
+in2 = 3
+
+fig, axs = plt.subplots(4, 3)
 i = 0
 panel_font = {'family': 'serif', 'size': 12,'name': 'Times New Roman'}
 
+labels = ['Week 0','Week 1','Week 2']
+
+
+
 for rgb_img in rgb_images:
     plt.tick_params(labelbottom=False, labelleft=False)
-    axs[int(i/3) % 3, i % 3].imshow(rgb_img)
-    axs[int(i/3) % 3, i % 3].set_xticklabels([])
-    axs[int(i/3) % 3, i % 3].set_yticklabels([])
-    axs[int(i/3) % 3, i % 3].set_xticks([])
-    axs[int(i/3) % 3, i % 3].set_yticks([])
-    axs[int(i/3) % 3, i % 3].text(0.65, -0.175, f'({chr(97+i)})', transform=axs[int(i/3) % 3, i % 3].transAxes, 
+    axs[int(i/in1) % 4, i % in2].imshow(np.swapaxes(rgb_img,0,1))
+    axs[int(i/in1) % 4, i % in2].set_xticklabels([])
+    axs[int(i/in1) % 4, i % in2].set_yticklabels([])
+    axs[int(i/in1) % 4, i % in2].set_xticks([])
+    axs[int(i/in1) % 4, i % in2].set_yticks([])
+    axs[int(i/in1) % 4, i % in2].text(0.65, -0.25, f'({chr(97+i)})', transform=axs[int(i/3) % 4, i % 3].transAxes, 
             fontdict=panel_font, va='bottom', ha='right')
 
+    if i < 3:
+        axs[int(i/in1) % 4, i % in2].set_title(labels[i],fontname='Times New Roman',fontsize=12)
     i += 1
 
 #plt.tight_layout()
-fig.subplots_adjust(wspace=-0.6, hspace=0.2)
+fig.subplots_adjust(wspace=-0.6, hspace=0.25)
 fig.show()
 fig.savefig('false_color.png', dpi=300, bbox_inches='tight') 
 # %%
