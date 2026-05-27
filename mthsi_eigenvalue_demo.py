@@ -367,15 +367,43 @@ print('PCA')
 for fit in [pfit_day1_reshape,pfit_day2_reshape,pfit_day3_reshape]:
     plotFalseColorEmbedding(fit,dims=dims)
 
+#%% fcir normalization routine?
+wvl=cubeData['wavelengths']
+frIndex = ((wvl-860) > 0).argmax()
+fgIndex = ((wvl-660) > 0).argmax()
+fbIndex = ((wvl-560) > 0).argmax()
+
+imgs = [reg_day1_reshape,
+    reg_day2_reshape,
+    reg_day3_reshape]
+
+fcirImgs = []
+for img in imgs:
+    colorData = np.array([img[:,:,frIndex],img[:,:,fgIndex],img[:,:,fbIndex]])
+    fcirImgs += [colorData]
+fcirImgs = np.array(fcirImgs)
+
+fcirRed = fcirImgs[:,0,:,:]
+fcirGreen = fcirImgs[:,1,:,:]
+fcirBlue = fcirImgs[:,2,:,:]
+
+fcirRedMax = np.max(np.reshape(fcirRed,-1))
+fcirGreenMax = np.max(np.reshape(fcirGreen,-1))
+fcirBlueMax = np.max(np.reshape(fcirBlue,-1))
+
+fcirImgsNorm = np.array([fcirRed/fcirRedMax,fcirGreen/fcirGreenMax,fcirBlue/fcirBlueMax])
+print(np.shape(fcirImgsNorm))
+fcirImgsNorm = np.swapaxes(fcirImgsNorm,0,1)
+fcirImgsNorm = np.swapaxes(fcirImgsNorm,2,3)
 # %% make my big jumbo plot for my paper
 
 rgb_fits = [
     reg_day1_reshape,
     reg_day2_reshape,
     reg_day3_reshape,
-    reg_day1_reshape,
-    reg_day2_reshape,
-    reg_day3_reshape,
+    fcirImgsNorm[0],
+    fcirImgsNorm[1],
+    fcirImgsNorm[2],
     pfit_day1_reshape,
     pfit_day2_reshape,
     pfit_day3_reshape,
@@ -400,15 +428,17 @@ perBand = True
 rgb_images = []
 i = 0
 for img in rgb_fits:
-    if np.shape(img)[2] < 421:
+    if np.shape(img)[0] == 3:
+        img = np.swapaxes(img,1,2)
+    if np.shape(img)[2] == 100:
         colorData = np.array([img[:,:,dims[0]],img[:,:,dims[1]],img[:,:,dims[2]]])
     else:
         if i < 3:
             colorData = np.array([img[:,:,rIndex],img[:,:,gIndex],img[:,:,bIndex]])
             perBand = False
         else:
-            colorData = np.array([img[:,:,frIndex],img[:,:,fgIndex],img[:,:,fbIndex]])
-            perBand = True
+            colorData = img
+            perBand = False
     # normalize
     colorMin = np.min(np.concatenate(np.concatenate(colorData)))
     if colorMin < 0:
@@ -424,6 +454,7 @@ for img in rgb_fits:
         # fix normalization procedure for color max to do it per band?
         colorDataNorm = colorData/colorMax
     colorImage = np.swapaxes(colorDataNorm,0,2)
+    print(np.shape(colorImage))
     rgb_images += [colorImage]
     i += 1
 
