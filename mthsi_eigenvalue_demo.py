@@ -463,30 +463,30 @@ for img in rgb_fits:
 in1 = 3
 in2 = 3
 
-fig, axs = plt.subplots(4, 3)
+fig, axs = plt.subplots(3, 4)
 i = 0
 panel_font = {'family': 'serif', 'size': 12,'name': 'Times New Roman'}
 
-labels = ['Week 0','Week 1','Week 2']
+labels = ['Week 0','Week 2','Week 4']
 
 
 
 for rgb_img in rgb_images:
     plt.tick_params(labelbottom=False, labelleft=False)
-    axs[int(i/in1) % 4, i % in2].imshow(np.swapaxes(rgb_img,0,1))
-    axs[int(i/in1) % 4, i % in2].set_xticklabels([])
-    axs[int(i/in1) % 4, i % in2].set_yticklabels([])
-    axs[int(i/in1) % 4, i % in2].set_xticks([])
-    axs[int(i/in1) % 4, i % in2].set_yticks([])
-    axs[int(i/in1) % 4, i % in2].text(0.65, -0.25, f'({chr(97+i)})', transform=axs[int(i/3) % 4, i % 3].transAxes, 
+    axs[i % in2, int(i/in1) % 4].imshow(np.swapaxes(rgb_img,0,1))
+    axs[i % in2, int(i/in1) % 4].set_xticklabels([])
+    axs[i % in2, int(i/in1) % 4].set_yticklabels([])
+    axs[i % in2, int(i/in1) % 4].set_xticks([])
+    axs[i % in2, int(i/in1) % 4].set_yticks([])
+    axs[i % in2, int(i/in1) % 4].text(0.65, -0.25, f'({chr(97+i)})', transform=axs[int(i/4) % 3, i % 4].transAxes, 
             fontdict=panel_font, va='bottom', ha='right')
 
     if i < 3:
-        axs[int(i/in1) % 4, i % in2].set_title(labels[i],fontname='Times New Roman',fontsize=12)
+        axs[i % in2, int(i/in1) % 4].set_ylabel(labels[i],fontname='Times New Roman',fontsize=12)
     i += 1
 
 #plt.tight_layout()
-fig.subplots_adjust(wspace=-0.6, hspace=0.25)
+fig.subplots_adjust(wspace=0.1, hspace=0.05)
 fig.show()
 fig.savefig('false_color.png', dpi=300, bbox_inches='tight') 
 # %%

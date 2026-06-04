@@ -18,10 +18,13 @@ def sort_mthsi_df(df):
 
 
 #%% load in data
-veg_isomap_eigenvalues = pd.read_csv('veg_isomap_eigenvalues.csv')
-veg_laplacian_eigenvalues = pd.read_csv('veg_laplacian_eigenvalues.csv')
-veg_lle_eigenvalues = pd.read_csv('veg_lle_eigenvalues.csv')
-veg_pca_eigenvalues = pd.read_csv('veg_pca_eigenvalues.csv')
+
+data = 'city'
+
+veg_isomap_eigenvalues = pd.read_csv(f'{data}_isomap_eigenvalues.csv')
+veg_laplacian_eigenvalues = pd.read_csv(f'{data}_laplacian_eigenvalues.csv')
+veg_lle_eigenvalues = pd.read_csv(f'{data}_lle_eigenvalues.csv')
+veg_pca_eigenvalues = pd.read_csv(f'{data}_pca_eigenvalues.csv')
 # %% sort data
 veg_isomap_dict = sort_mthsi_df(veg_isomap_eigenvalues)
 veg_laplacian_dict = sort_mthsi_df(veg_laplacian_eigenvalues)
@@ -30,10 +33,10 @@ veg_pca_dict = sort_mthsi_df(veg_pca_eigenvalues)
 
 # %%
 # for veg, use all data; for city, [1::]
-veg_isomap_eigens = veg_isomap_dict['Eigenvalues']
-veg_laplacian_eigens = veg_laplacian_dict['Eigenvalues']
-veg_lle_eigens = veg_lle_dict['Eigenvalues']
-veg_pca_eigens = veg_pca_dict['Eigenvalues']
+veg_isomap_eigens = veg_isomap_dict['Eigenvalues'][1::]
+veg_laplacian_eigens = veg_laplacian_dict['Eigenvalues'][1::]
+veg_lle_eigens = veg_lle_dict['Eigenvalues'][1::]
+veg_pca_eigens = veg_pca_dict['Eigenvalues'][1::]
 
 #%%
 mode = 'diff'
@@ -73,6 +76,7 @@ for metric in ['sam','euclidean','manhattan']:
     plt.plot(time,pca_metric,label='PCA',marker='o')
     plt.xlabel('Time [weeks]')
     plt.ylabel(f'Change from {mode} of {metric} distance')
+
     plt.legend()
 
 
