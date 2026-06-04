@@ -161,6 +161,47 @@ for image in [*cubeDictCity.keys()]:
         read.plotRGB(slicedCubeData)
         slice_cubes_city[image] = slicedCubeData
 
+#%% analyze spectra of city cubes?
+
+labels = ['Week 0','Week 2', 'Week 4', 'Week 6', 'Week 8']
+
+plt.figure
+i = 0
+for time in [*slice_cubes_city.keys()][1::]:
+    cube = slice_cubes_city[time]['cube']
+    flat_cube = np.concatenate(cube,axis=0)
+
+    avg_spectra = np.mean(flat_cube,axis=0)
+    std_specta = np.std(flat_cube,axis=0)
+    wavelength = slice_cubes_city[time]['wavelengths']
+
+    plt.plot(wavelength,avg_spectra,label=labels[i])
+    i += 1
+
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Reflectance')
+plt.legend()
+
+i = 0
+for time in [*slice_cubes_city.keys()][1::]:
+    print(time)
+    if i % 2 == 0:
+        cube = slice_cubes_city[time]['cube']
+        flat_cube = np.concatenate(cube,axis=0)
+        print(np.shape(flat_cube))
+
+        avg_spectra = np.mean(flat_cube,axis=0)
+        std_specta = np.std(flat_cube,axis=0)
+        wavelength = slice_cubes_city[time]['wavelengths']
+
+        plt.figure()
+        plt.plot(wavelength,avg_spectra,label=labels[i])
+        plt.fill_between(wavelength,avg_spectra-std_specta,avg_spectra+std_specta,alpha=0.2)
+        plt.xlabel('Wavelength [nm]')
+        plt.ylabel('Reflectance')
+        plt.title(time)
+    i += 1
+
 # %% Generate eigenvalues for each image in each embedding type and read out to files for vegetation
 laplacian_eigendata_veg = pd.DataFrame(columns=['Date','Eigenvalues'])
 isomap_eigendata_veg = pd.DataFrame(columns=['Date','Eigenvalues'])
