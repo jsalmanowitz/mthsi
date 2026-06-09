@@ -9,11 +9,11 @@ import utils.read as read
 import utils.eigencomp as eigencomp
 
 #%% read-in file names for test read
-shots_path = r"./data/tanager/lake_shots/"
+shots_path = r"./data/tanager/city_shots/"
 tanager_files = read.getFiles(shots_path)
 
 # %% test read in files to find crops
-file = tanager_files[4]
+file = tanager_files[0]
 cubeTest = read.getHyperspectralCube('tanager',shots_path,fr"{file}")
 slicedCubeTest = read.sliceCube(cubeTest,[275,300,220,275])
 # %% test plot cubes to find crops
@@ -405,6 +405,42 @@ laplacian_eigendata_city.to_csv('city_laplacian_eigenvalues.csv', index=False)
 isomap_eigendata_city.to_csv('city_isomap_eigenvalues.csv', index=False)
 lle_eigendata_city.to_csv('city_lle_eigenvalues.csv', index=False)
 pca_eigendata_city.to_csv('city_pca_eigenvalues.csv', index=False)
+
+end = datetime.now()
+print(end)
+print(f"Total elapsed time: {end-start}")
+
+# %% Generate eigenvalues for each image in each embedding type and read out to files for vegetation
+laplacian_eigendata_hen = pd.DataFrame(columns=['Date','Eigenvalues'])
+isomap_eigendata_hen = pd.DataFrame(columns=['Date','Eigenvalues'])
+lle_eigendata_hen = pd.DataFrame(columns=['Date','Eigenvalues'])
+pca_eigendata_hen = pd.DataFrame(columns=['Date','Eigenvalues'])
+
+start = datetime.now()
+print(start)
+
+for veg_image in [*slice_cubes_hen.keys()]:
+    image = slice_cubes_hen[veg_image]
+    if image != None:
+        lap = eigencomp.get_laplacian_evs(image,100,100)
+        iso = eigencomp.get_iso_evs(image,100,100)
+        lle = eigencomp.get_lle_evs(image,100,100)
+        pca = eigencomp.get_pca_evs(image,100)
+
+        lap_ev_df = pd.DataFrame({'Date': veg_image, 'Eigenvalues': lap})
+        iso_ev_df = pd.DataFrame({'Date': veg_image, 'Eigenvalues': iso})
+        lle_ev_df = pd.DataFrame({'Date': veg_image, 'Eigenvalues': lle})
+        pca_ev_df = pd.DataFrame({'Date': veg_image, 'Eigenvalues': pca})
+
+        laplacian_eigendata_veg = pd.concat([laplacian_eigendata_veg, lap_ev_df], ignore_index=True)
+        isomap_eigendata_veg = pd.concat([isomap_eigendata_veg, iso_ev_df], ignore_index=True)
+        lle_eigendata_veg = pd.concat([lle_eigendata_veg, lle_ev_df], ignore_index=True)
+        pca_eigendata_veg = pd.concat([pca_eigendata_veg, pca_ev_df], ignore_index=True)
+
+laplacian_eigendata_veg.to_csv('hen_laplacian_eigenvalues.csv', index=False)
+isomap_eigendata_veg.to_csv('hen_isomap_eigenvalues.csv', index=False)
+lle_eigendata_veg.to_csv('hen_lle_eigenvalues.csv', index=False)
+pca_eigendata_veg.to_csv('hen_pca_eigenvalues.csv', index=False)
 
 end = datetime.now()
 print(end)
