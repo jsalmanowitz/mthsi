@@ -57,6 +57,9 @@ def getHyperspectralCube(sensor,file_path,file_name,header_name=None):
                 cirrus_mask = np.ones(np.shape(cirrus))-cirrus
                 cloud = f[[*f.keys()][0]]['GRIDS']['HYP']['Data Fields']['beta_cloud_mask'][()]
                 cloud_mask = np.ones(np.shape(cloud))-cloud
+                aerosol = f[[*f.keys()][0]]['GRIDS']['HYP']['Data Fields']['aerosol_optical_depth'][()]
+                water_vapor = f[[*f.keys()][0]]['GRIDS']['HYP']['Data Fields']['column_water_vapour'][()]
+
                 reflectance = np.swapaxes(reflectance,1,2)
                 reflectance_masked = reflectance*cloud_mask[:,:,np.newaxis]*cirrus_mask[:,:,np.newaxis],
                 return {
@@ -65,14 +68,22 @@ def getHyperspectralCube(sensor,file_path,file_name,header_name=None):
             'file_name': file_name,
             'cirrus_mask': cirrus_mask,
             'cloud_mask': cloud_mask,
+            'aerosol_depth': aerosol,
+            'water_vapor': water_vapor
             }
 
 def sliceCube(cubeData,slice):
     # slice should be a 4-element list with the coordinates slicing the array
     newCubeData = cubeData.copy()
     hyperCube = newCubeData['cube']
+    aerosol = newCubeData['aerosol_depth']
+    water = newCubeData['water_vapor']
     slicedHyperCube = hyperCube[slice[0]:slice[1],slice[2]:slice[3],:]
+    slicedAerosol = aerosol[slice[0]:slice[1],slice[2]:slice[3]]
+    slicedWater = water[slice[0]:slice[1],slice[2]:slice[3]]
     newCubeData['cube'] = slicedHyperCube
+    newCubeData['aerosol_depth'] = slicedAerosol
+    newCubeData['water_vapor'] = slicedWater
     return newCubeData
 
 # plotting functions

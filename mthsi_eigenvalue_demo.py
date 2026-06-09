@@ -13,9 +13,9 @@ shots_path = r"./data/tanager/lake_shots/"
 tanager_files = read.getFiles(shots_path)
 
 # %% test read in files to find crops
-file = tanager_files[1]
+file = tanager_files[4]
 cubeTest = read.getHyperspectralCube('tanager',shots_path,fr"{file}")
-slicedCubeTest = read.sliceCube(cubeTest,[74,94,455,485])
+slicedCubeTest = read.sliceCube(cubeTest,[275,300,220,275])
 # %% test plot cubes to find crops
 
 read.plotRGB(cubeTest,use_plotly=True)
@@ -161,6 +161,43 @@ for image in [*cubeDictCity.keys()]:
         read.plotRGB(slicedCubeData)
         slice_cubes_city[image] = slicedCubeData
 
+#%% plot aerosol depth over city
+mean_aerosol = []
+mean_water = []
+std_aerosol = []
+std_water = []
+for image in [*cubeDictCity.keys()]:
+    cubeData = cubeDictCity[image]
+    slice_data = slice_info_city[image]
+    if slice_data != None:
+        slicedCubeData = read.sliceCube(cubeData,slice_data)
+        plt.figure()
+        plt.imshow(slicedCubeData['aerosol_depth'])
+        plt.colorbar()
+
+        mean_aerosol += [np.mean(np.concatenate(slicedCubeData['aerosol_depth']))]
+        std_aerosol += [np.std(np.concatenate(slicedCubeData['aerosol_depth']))]
+        mean_water += [np.mean(np.concatenate(slicedCubeData['water_vapor']))]
+        std_water += [np.std(np.concatenate(slicedCubeData['water_vapor']))]
+
+weeks = [0,2,4,6,8]
+mean_aerosol = np.array(mean_aerosol[1::])
+mean_water = np.array(mean_water[1::])    
+std_aerosol = np.array(std_aerosol[1::])
+std_water = np.array(std_water[1::])
+plt.figure()
+plt.plot(weeks,mean_aerosol)
+plt.fill_between(weeks,mean_aerosol-std_aerosol,mean_aerosol+std_aerosol,alpha=0.2)
+plt.xlabel('Time [weeks]')
+plt.ylabel('Aerosol Optical Depth')
+
+plt.figure()
+plt.plot(weeks,mean_water)
+plt.fill_between(weeks,mean_water-std_water,mean_water+std_water,alpha=0.2)
+plt.xlabel('Time [weeks]')
+plt.ylabel('Column Water Vapor [g/cm^2]')
+
+ 
 #%% analyze spectra of city cubes?
 
 labels = ['Week 0','Week 2', 'Week 4', 'Week 6', 'Week 8']
@@ -193,6 +230,105 @@ for time in [*slice_cubes_city.keys()][1::]:
         avg_spectra = np.mean(flat_cube,axis=0)
         std_specta = np.std(flat_cube,axis=0)
         wavelength = slice_cubes_city[time]['wavelengths']
+
+        plt.figure()
+        plt.plot(wavelength,avg_spectra,label=labels[i])
+        plt.fill_between(wavelength,avg_spectra-std_specta,avg_spectra+std_specta,alpha=0.2)
+        plt.xlabel('Wavelength [nm]')
+        plt.ylabel('Reflectance')
+        plt.title(time)
+    i += 1
+
+# %% slice to city data for city shots
+slice_info_hen = {
+    "20250704_165208_78_4001_ortho_sr_hdf5.h5": [384,404,283,313],
+    "20250801_165548_86_4001_ortho_sr_hdf5.h5": None,
+    "20250903_164719_92_4001_ortho_sr_hdf5.h5": [275,300,220,275],
+    "20250919_170238_88_4001_ortho_sr_hdf5.h5": [285,310,220,275],
+    "20251001_165054_91_4001_ortho_sr_hdf5.h5": [270,295,205,260],
+    "20251015_165301_89_4001_ortho_sr_hdf5.h5": [340,365,410,465],
+    "20251029_165501_94_4001_ortho_sr_hdf5.h5": [325,350,405,460],
+
+}
+
+slice_cubes_hen = {}
+for image in [*cubeDictCity.keys()]:
+    cubeData = cubeDictCity[image]
+    slice_data = slice_info_hen[image]
+    if slice_data != None:
+        slicedCubeData = read.sliceCube(cubeData,slice_data)
+        read.plotRGB(slicedCubeData)
+        slice_cubes_hen[image] = slicedCubeData
+
+#%% plot aerosol depth over henrietta
+mean_aerosol = []
+mean_water = []
+std_aerosol = []
+std_water = []
+for image in [*cubeDictCity.keys()]:
+    cubeData = cubeDictCity[image]
+    slice_data = slice_info_hen[image]
+    if slice_data != None:
+        slicedCubeData = read.sliceCube(cubeData,slice_data)
+        plt.figure()
+        plt.imshow(slicedCubeData['aerosol_depth'])
+        plt.colorbar()
+
+        mean_aerosol += [np.mean(np.concatenate(slicedCubeData['aerosol_depth']))]
+        std_aerosol += [np.std(np.concatenate(slicedCubeData['aerosol_depth']))]
+        mean_water += [np.mean(np.concatenate(slicedCubeData['water_vapor']))]
+        std_water += [np.std(np.concatenate(slicedCubeData['water_vapor']))]
+
+weeks = [0,2,4,6,8]
+mean_aerosol = np.array(mean_aerosol[1::])
+mean_water = np.array(mean_water[1::])    
+std_aerosol = np.array(std_aerosol[1::])
+std_water = np.array(std_water[1::])
+plt.figure()
+plt.plot(weeks,mean_aerosol)
+plt.fill_between(weeks,mean_aerosol-std_aerosol,mean_aerosol+std_aerosol,alpha=0.2)
+plt.xlabel('Time [weeks]')
+plt.ylabel('Aerosol Optical Depth')
+
+plt.figure()
+plt.plot(weeks,mean_water)
+plt.fill_between(weeks,mean_water-std_water,mean_water+std_water,alpha=0.2)
+plt.xlabel('Time [weeks]')
+plt.ylabel('Column Water Vapor [g/cm^2]')
+
+ 
+#%% analyze spectra of henrietta cubes?
+
+labels = ['Week 0','Week 2', 'Week 4', 'Week 6', 'Week 8']
+
+plt.figure
+i = 0
+for time in [*slice_cubes_hen.keys()][1::]:
+    cube = slice_cubes_hen[time]['cube']
+    flat_cube = np.concatenate(cube,axis=0)
+
+    avg_spectra = np.mean(flat_cube,axis=0)
+    std_specta = np.std(flat_cube,axis=0)
+    wavelength = slice_cubes_hen[time]['wavelengths']
+
+    plt.plot(wavelength,avg_spectra,label=labels[i])
+    i += 1
+
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Reflectance')
+plt.legend()
+
+i = 0
+for time in [*slice_cubes_hen.keys()][1::]:
+    print(time)
+    if i % 2 == 0:
+        cube = slice_cubes_hen[time]['cube']
+        flat_cube = np.concatenate(cube,axis=0)
+        print(np.shape(flat_cube))
+
+        avg_spectra = np.mean(flat_cube,axis=0)
+        std_specta = np.std(flat_cube,axis=0)
+        wavelength = slice_cubes_hen[time]['wavelengths']
 
         plt.figure()
         plt.plot(wavelength,avg_spectra,label=labels[i])
