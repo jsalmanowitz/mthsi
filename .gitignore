@@ -58,3 +58,5 @@ gsd_eigenvalues_laplacian_city_scaled_1.csv
 gsd_eigenvalues_laplacian_city_scaled_2.csv
 gsd_eigenvalues_laplacian_city.csv
 false_color.png
+venv/
+.venv/
