@@ -12,7 +12,10 @@ from sklearn.decomposition import PCA
 #%% utils for graph analysis
 def clean_cube(hyperCube):
      # removes masked portions of hyperspectral cube (pixels with no data)
-     X = np.concatenate(hyperCube['cube'])
+     if len(np.shape(hyperCube)) > 2:
+        X = np.concatenate(hyperCube['cube'])
+     else: 
+        X = hyperCube
      X = X[np.where(np.linalg.norm(X,axis=1) > 0)]
      return X
 
@@ -95,7 +98,7 @@ def get_pca_evs(hyperCube,num):
     pca = PCA(n_components=num)
     pca.fit(X)
     ev_spec = pca.explained_variance_
-    ev_spec_norm = ev_spec/np.sum(ev_spec)
+    ev_spec_norm = ev_spec/ev_spec[0]
     return ev_spec_norm
 
 def get_laplacian_evs(hyperCube, k, num, mode='distance',metric='cosine'):
@@ -131,5 +134,5 @@ def get_iso_evs(hyperCube,k,num,metric='cosine'):
     iso = Isomap(n_components=num,n_neighbors=k,metric=metric)
     iso.fit(X)
     ev_spec = iso.kernel_pca_.eigenvalues_
-    ev_spec_norm = ev_spec/np.sum(ev_spec)
+    ev_spec_norm = ev_spec/ev_spec[0]
     return ev_spec_norm
