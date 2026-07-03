@@ -53,7 +53,7 @@ def getNDVI(wavelengths,spectrum):
 
     ndvi = (spectrum[:,index860]-spectrum[:,index660])/(spectrum[:,index860]+spectrum[:,index660])
     
-    return np.mean(ndvi)
+    return ndvi
 
 #%%
 beets_test = readBeets(disease_shots_path)
@@ -71,15 +71,13 @@ for plot in plots:
             spectrum = plot_data[day]['spectrum']
             ndvi = getNDVI(wavelengths,spectrum)
             plt.plot(wavelengths,np.mean(spectrum,axis=0),
-                    label=f"{day}, disease severity = {plot_data[day]['disease_severity']:.2f}, mean NDVI = {ndvi:.2f}")
+                    label=f"{day}, disease severity = {plot_data[day]['disease_severity']:.2f}, mean NDVI = {np.mean(ndvi):.2f}")
         plt.legend()
         plt.xlabel('Wavelength')
         plt.ylabel('Mean Reflectance Spectrum')
         plt.title(plot)
 
 #%% fix this later but not currently operational
-
-labels = ['Week 0','Week 2', 'Week 4', 'Week 6', 'Week 8']
 
 avg_ndvi_list = []
 std_ndvi_list = []
@@ -88,11 +86,17 @@ min_ndvi_list = []
 
 i = 0
 ndvi_dict = {}
-for time in [*slice_cubes_lake.keys()]:
-    cubeData = slice_cubes_lake[time]
-    ndvi = getNDVI(wavelengths,mode='list')
+plot = [[*beets_test.keys()][5]]
+for plot in plots:
+    if plot != 'wavelengths':
+        plot_data = beets_test[plot]
+        plt.figure()
+        for day in [*plot_data.keys()]:
+            wavelengths = beets_test['wavelengths']
+            spectrum = plot_data[day]['spectrum']
+            ndvi = getNDVI(wavelengths,spectrum)
 
-    ndvi_dict[labels[i]] = ndvi
+            ndvi_dict[day] = ndvi
 
     avg_ndvi = np.mean(ndvi)
     std_ndvi = np.std(ndvi)
@@ -108,24 +112,33 @@ ax.set_xticklabels(ndvi_dict.keys())
 ax.set_ylabel('NDVI')
 
 # %% Generate eigenvalues for each image in each embedding type and read out to files for vegetation
-plots = [[*beets_test.keys()][5]]
+plots = [*beets_test.keys()] # plot 5 is pretty good
 
-eigen_list = []
 for plot in plots:
+    print(f"Starting {plot}")
+    save_array = np.empty((5, 271))
     if plot != 'wavelengths':
         plot_data = beets_test[plot]
+        i = 0
         for day in [*plot_data.keys()]:
+            eigen_list = []
             wavelengths = beets_test['wavelengths']
             spectrum = plot_data[day]['spectrum']
             ndvi = getNDVI(wavelengths,spectrum)
             iso = eigencomp.get_iso_evs(spectrum,10,271)
             eigen_list += [iso]
+            save_array[i,:] = np.array(eigen_list)
+            i += 1
             plt.plot(iso,
-                    label=f"{day}, disease severity = {plot_data[day]['disease_severity']:.2f}, mean NDVI = {ndvi:.2f}")
+                    label=f"{day}, disease severity = {plot_data[day]['disease_severity']:.2f}, mean NDVI = {np.mean(ndvi):.2f}")
         plt.legend()
         plt.xlabel('Eigenvalue Index')
         plt.ylabel('Eigenvalue Magnitude')
         plt.yscale('log')
+        print(f'Saving {plot}')
+        np.save(f'disease_plot_isos_{plot}.npy', save_array)
+
+
 #%%
 diff_list = eigencomp.get_metrics_from_list(eigen_list,'euclidean',mode='diff')
 start_list = eigencomp.get_metrics_from_list(eigen_list,'euclidean',mode='start')
@@ -135,114 +148,8 @@ plt.plot(start_list,label='start')
 plt.legend()
 plt.xlabel('Day')
 plt.ylabel('Difference Metric')
-# %% Generate eigenvalues for each image in each embedding type and read out to files for vegetation
-laplacian_eigendata_veg = pd.DataFrame(columns=['Date','Eigenvalues'])
-isomap_eigendata_veg = pd.DataFrame(columns=['Date','Eigenvalues'])
-lle_eigendata_veg = pd.DataFrame(columns=['Date','Eigenvalues'])
-pca_eigendata_veg = pd.DataFrame(columns=['Date','Eigenvalues'])
 
-start = datetime.now()
-print(start)
-
-for veg_image in [*slice_cubes_lake.keys()]:
-    image = slice_cubes_lake[veg_image]
-    if image != None:
-        lap = eigencomp.get_laplacian_evs(image,100,100)
-        iso = eigencomp.get_iso_evs(image,100,100)
-        lle = eigencomp.get_lle_evs(image,100,100)
-        pca = eigencomp.get_pca_evs(image,100)
-
-        lap_ev_df = pd.DataFrame({'Date': veg_image, 'Eigenvalues': lap})
-        iso_ev_df = pd.DataFrame({'Date': veg_image, 'Eigenvalues': iso})
-        lle_ev_df = pd.DataFrame({'Date': veg_image, 'Eigenvalues': lle})
-        pca_ev_df = pd.DataFrame({'Date': veg_image, 'Eigenvalues': pca})
-
-        laplacian_eigendata_veg = pd.concat([laplacian_eigendata_veg, lap_ev_df], ignore_index=True)
-        isomap_eigendata_veg = pd.concat([isomap_eigendata_veg, iso_ev_df], ignore_index=True)
-        lle_eigendata_veg = pd.concat([lle_eigendata_veg, lle_ev_df], ignore_index=True)
-        pca_eigendata_veg = pd.concat([pca_eigendata_veg, pca_ev_df], ignore_index=True)
-
-laplacian_eigendata_veg.to_csv('veg_laplacian_eigenvalues.csv', index=False)
-isomap_eigendata_veg.to_csv('veg_isomap_eigenvalues.csv', index=False)
-lle_eigendata_veg.to_csv('veg_lle_eigenvalues.csv', index=False)
-pca_eigendata_veg.to_csv('veg_pca_eigenvalues.csv', index=False)
-
-end = datetime.now()
-print(end)
-print(f"Total elapsed time: {end-start}")
-
-# %% Generate eigenvalues for each image in each embedding type and read out to files for city
-laplacian_eigendata_city = pd.DataFrame(columns=['Date','Eigenvalues'])
-isomap_eigendata_city = pd.DataFrame(columns=['Date','Eigenvalues'])
-lle_eigendata_city = pd.DataFrame(columns=['Date','Eigenvalues'])
-pca_eigendata_city = pd.DataFrame(columns=['Date','Eigenvalues'])
-
-start = datetime.now()
-print(start)
-
-for city_image in [*slice_cubes_city.keys()]:
-    image = slice_cubes_city[city_image]
-    if image != None:
-        lap = eigencomp.get_laplacian_evs(image,100,100)
-        iso = eigencomp.get_iso_evs(image,100,100)
-        lle = eigencomp.get_lle_evs(image,100,100)
-        pca = eigencomp.get_pca_evs(image,100)
-
-        lap_ev_df = pd.DataFrame({'Date': city_image, 'Eigenvalues': lap})
-        iso_ev_df = pd.DataFrame({'Date': city_image, 'Eigenvalues': iso})
-        lle_ev_df = pd.DataFrame({'Date': city_image, 'Eigenvalues': lle})
-        pca_ev_df = pd.DataFrame({'Date': city_image, 'Eigenvalues': pca})
-
-        laplacian_eigendata_city = pd.concat([laplacian_eigendata_city, lap_ev_df], ignore_index=True)
-        isomap_eigendata_city = pd.concat([isomap_eigendata_city, iso_ev_df], ignore_index=True)
-        lle_eigendata_city = pd.concat([lle_eigendata_city, lle_ev_df], ignore_index=True)
-        pca_eigendata_city = pd.concat([pca_eigendata_city, pca_ev_df], ignore_index=True)
-
-laplacian_eigendata_city.to_csv('city_laplacian_eigenvalues.csv', index=False)
-isomap_eigendata_city.to_csv('city_isomap_eigenvalues.csv', index=False)
-lle_eigendata_city.to_csv('city_lle_eigenvalues.csv', index=False)
-pca_eigendata_city.to_csv('city_pca_eigenvalues.csv', index=False)
-
-end = datetime.now()
-print(end)
-print(f"Total elapsed time: {end-start}")
-
-# %% Generate eigenvalues for each image in each embedding type and read out to files for vegetation
-laplacian_eigendata_hen = pd.DataFrame(columns=['Date','Eigenvalues'])
-isomap_eigendata_hen = pd.DataFrame(columns=['Date','Eigenvalues'])
-lle_eigendata_hen = pd.DataFrame(columns=['Date','Eigenvalues'])
-pca_eigendata_hen = pd.DataFrame(columns=['Date','Eigenvalues'])
-
-start = datetime.now()
-print(start)
-
-for veg_image in [*slice_cubes_hen.keys()]:
-    image = slice_cubes_hen[veg_image]
-    if image != None:
-        lap = eigencomp.get_laplacian_evs(image,100,100)
-        iso = eigencomp.get_iso_evs(image,100,100)
-        lle = eigencomp.get_lle_evs(image,100,100)
-        pca = eigencomp.get_pca_evs(image,100)
-
-        lap_ev_df = pd.DataFrame({'Date': veg_image, 'Eigenvalues': lap})
-        iso_ev_df = pd.DataFrame({'Date': veg_image, 'Eigenvalues': iso})
-        lle_ev_df = pd.DataFrame({'Date': veg_image, 'Eigenvalues': lle})
-        pca_ev_df = pd.DataFrame({'Date': veg_image, 'Eigenvalues': pca})
-
-        laplacian_eigendata_veg = pd.concat([laplacian_eigendata_veg, lap_ev_df], ignore_index=True)
-        isomap_eigendata_veg = pd.concat([isomap_eigendata_veg, iso_ev_df], ignore_index=True)
-        lle_eigendata_veg = pd.concat([lle_eigendata_veg, lle_ev_df], ignore_index=True)
-        pca_eigendata_veg = pd.concat([pca_eigendata_veg, pca_ev_df], ignore_index=True)
-
-laplacian_eigendata_veg.to_csv('hen_laplacian_eigenvalues.csv', index=False)
-isomap_eigendata_veg.to_csv('hen_isomap_eigenvalues.csv', index=False)
-lle_eigendata_veg.to_csv('hen_lle_eigenvalues.csv', index=False)
-pca_eigendata_veg.to_csv('hen_pca_eigenvalues.csv', index=False)
-
-end = datetime.now()
-print(end)
-print(f"Total elapsed time: {end-start}")
-# %%
+# %% NOT STARTED YET: plot false color images
 
 from sklearn.manifold import Isomap
 from sklearn.decomposition import PCA
