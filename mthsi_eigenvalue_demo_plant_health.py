@@ -40,9 +40,13 @@ def readBeets(file_path):
             for day in [*f['plots'][plot].keys()]:
                 spectrum = f['plots'][plot][day]['spectra'][()]
                 disease_severity = f['plots'][plot][day]['ground_truth_severity'][()]
+                cube = f['plots'][plot][day]['cube'][()]
+                mask = f['plots'][plot][day]['mask'][()]
                 plotData[day] = {
                     'spectrum': spectrum,
                     'disease_severity': disease_severity,
+                    'cube': cube,
+                    'mask': mask
                 }
             beetsData[plot] = plotData
     return beetsData
@@ -55,10 +59,27 @@ def getNDVI(wavelengths,spectrum):
     
     return ndvi
 
+def downsample_2d_axis(arr, axis=0, factor=4):
+    # generated using gemini
+    if axis == 1:
+        # Downsample columns
+        valid_cols = (arr.shape[1] // factor) * factor
+        cropped = arr[:, :valid_cols]
+        reshaped = cropped.reshape(cropped.shape[0], cropped.shape[1] // factor, factor)
+        return reshaped.mean(axis=2)
+    elif axis == 0:
+        # Downsample rows
+        valid_rows = (arr.shape[0] // factor) * factor
+        cropped = arr[:valid_rows, :]
+        reshaped = cropped.reshape(cropped.shape[0] // factor, factor, cropped.shape[1])
+        return reshaped.mean(axis=1)
+    else:
+        raise ValueError("Axis must be 0 or 1 for a 2D array.")
+
 #%%
 beets_test = readBeets(disease_shots_path)
 
-#%% analyze spectra of cubes?
+#%% analyze spectra of plots
 
 plots = [[*beets_test.keys()][10]]
 
@@ -122,6 +143,8 @@ for plot in plots:
         i = 0
         for day in [*plot_data.keys()]:
             eigen_list = []
+            eigen_list_d1 = []
+            eigen_list_d2 = []
             wavelengths = beets_test['wavelengths']
             spectrum = plot_data[day]['spectrum']
             ndvi = getNDVI(wavelengths,spectrum)
@@ -129,15 +152,14 @@ for plot in plots:
             eigen_list += [iso]
             save_array[i,:] = np.array(eigen_list)
             i += 1
-            plt.plot(iso,
-                    label=f"{day}, disease severity = {plot_data[day]['disease_severity']:.2f}, mean NDVI = {np.mean(ndvi):.2f}")
+            #plt.plot(iso/np.linalg.norm(iso),
+            #        label=f"{day}, disease severity = {plot_data[day]['disease_severity']:.2f}, mean NDVI = {np.mean(ndvi):.2f}")
         plt.legend()
         plt.xlabel('Eigenvalue Index')
         plt.ylabel('Eigenvalue Magnitude')
         plt.yscale('log')
         print(f'Saving {plot}')
         np.save(f'disease_plot_isos_{plot}.npy', save_array)
-
 
 #%%
 diff_list = eigencomp.get_metrics_from_list(eigen_list,'euclidean',mode='diff')
@@ -148,6 +170,72 @@ plt.plot(start_list,label='start')
 plt.legend()
 plt.xlabel('Day')
 plt.ylabel('Difference Metric')
+
+#%% Downsample spectrum test
+
+plots = [[*beets_test.keys()][1]]
+
+for plot in plots:
+    if plot != 'wavelengths':
+        plot_data = beets_test[plot]
+        for day in [*plot_data.keys()]:
+            plt.figure()
+            spectrum = plot_data[day]['spectrum']
+            disease_severity = plot_data[day]['disease_severity']
+            plt.plot(np.mean(spectrum,axis=0),label='measured')
+            downsample = downsample_2d_axis(spectrum)
+            plt.plot(np.mean(downsample,axis=0),label='downsample 1')
+            downsample2 = downsample_2d_axis(downsample)
+            plt.plot(np.mean(downsample2,axis=0),label='downsample 2')
+            plt.legend()
+
+#%% Downsample eigenvalue test - ISOMAP
+
+plots = [[*beets_test.keys()][1]]
+
+for plot in plots:
+    if plot != 'wavelengths':
+        plot_data = beets_test[plot]
+        for day in [*plot_data.keys()]:
+            plt.figure()
+            spectrum = plot_data[day]['spectrum']
+            iso_spectrum = eigencomp.get_iso_evs(spectrum,10,271)
+            disease_severity = plot_data[day]['disease_severity']
+            downsample = downsample_2d_axis(spectrum)
+            iso_downsample1 = eigencomp.get_iso_evs(downsample,10,271)
+            downsample2 = downsample_2d_axis(downsample)
+            iso_downsample2 = eigencomp.get_iso_evs(downsample2,10,271)
+            
+            plt.plot(iso_spectrum/np.linalg.norm(iso_spectrum),label='measured')
+            plt.plot(iso_downsample1/np.linalg.norm(iso_downsample1),label='downsample by 2')
+            plt.plot(iso_downsample2/np.linalg.norm(iso_downsample2),label='downsample by 4')
+
+            plt.title(f"day = {day}, disease severity = {plot_data[day]['disease_severity']}")
+            plt.yscale('log')
+            plt.legend()
+#%% Downsample eigenvalue test - PCA
+for plot in plots:
+    if plot != 'wavelengths':
+        plot_data = beets_test[plot]
+        for day in [*plot_data.keys()]:
+            plt.figure()
+            spectrum = plot_data[day]['spectrum']
+            pca_spectrum = eigencomp.get_pca_evs(spectrum,271)
+            disease_severity = plot_data[day]['disease_severity']
+            downsample = downsample_2d_axis(spectrum)
+            pca_downsample1 = eigencomp.get_pca_evs(downsample,271)
+            downsample2 = downsample_2d_axis(downsample)
+            pca_downsample2 = eigencomp.get_pca_evs(downsample2,271)
+            
+            plt.plot(pca_spectrum/np.linalg.norm(pca_spectrum),label='measured')
+            plt.plot(pca_downsample1/np.linalg.norm(pca_downsample1),label='downsample by 2')
+            plt.plot(pca_downsample2/np.linalg.norm(pca_downsample2),label='downsample by 4')
+
+            plt.title(f"day = {day}, disease severity = {plot_data[day]['disease_severity']}")
+            plt.yscale('log')
+            plt.legend()
+
+
 
 # %% NOT STARTED YET: plot false color images
 
