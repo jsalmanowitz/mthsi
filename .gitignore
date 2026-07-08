@@ -101,3 +101,6 @@ disease_plot_isos_plot_038.npy
 disease_plot_isos_plot_039.npy
 disease_plot_isos_plot_040.npy
 disease_plot_isos.npy
+utils/__pycache__/eigencomp.cpython-312.pyc
+.gitignore
+utils/__pycache__/read.cpython-312.pyc
