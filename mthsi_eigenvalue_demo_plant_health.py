@@ -27,7 +27,7 @@ def print_structure(name, obj):
         print(f"{indent}📄 Dataset: {name} (shape={obj.shape}, dtype={obj.dtype})")
 
 # Load your file in read-only mode
-with h5py.File(healthy_shots_path) as f:
+with h5py.File(disease_shots_path) as f:
     print("📁 Root File Structure:")
     f.visititems(print_structure)
 
@@ -48,7 +48,7 @@ def readBeets(file_path,mode='unhealthy'):
                         'spectrum': spectrum,
                         'disease_severity': disease_severity,
                         'cube': cube,
-                        'mask': mask
+                        'mask': mask,
                     }
                 beetsData[plot] = plotData
         return beetsData
@@ -89,6 +89,7 @@ def downsample_2d_axis(arr, axis=0, factor=4):
         raise ValueError("Axis must be 0 or 1 for a 2D array.")
 
 #%%
+
 beets_test = readBeets(disease_shots_path)
 beets_healthy = readBeets(healthy_shots_path,mode='healthy')
 
@@ -153,6 +154,7 @@ plots = [*beets_test.keys()] # plot 5 is pretty good
 for plot in plots:
     print(f"Starting {plot}")
     save_array = np.empty((5, 271))
+    save_array_sev = np.empty(5,)
     if plot != 'wavelengths':
         plot_data = beets_test[plot]
         i = 0
@@ -162,10 +164,12 @@ for plot in plots:
             eigen_list_d2 = []
             wavelengths = beets_test['wavelengths']
             spectrum = plot_data[day]['spectrum']
+            disease_severity = plot_data[day]['disease_severity']
             ndvi = getNDVI(wavelengths,spectrum)
             iso = eigencomp.get_iso_evs(spectrum,10,271)
             eigen_list += [iso]
             save_array[i,:] = np.array(eigen_list)
+            save_array_sev[i] =disease_severity
             i += 1
             #plt.plot(iso/np.linalg.norm(iso),
             #        label=f"{day}, disease severity = {plot_data[day]['disease_severity']:.2f}, mean NDVI = {np.mean(ndvi):.2f}")
@@ -299,9 +303,9 @@ for i in range(5):
 
 # %% Batch run healthy eigenvalues stats
 
-batch_healthy_list = []
 for day in [[*beets_healthy.keys()][5]]:
     if day != 'wavelengths':
+        batch_healthy_list = []
         for i in range(100):
             if i % 10 == 0:
                 print(f"Beginning day {day} run {i+1}")
@@ -318,6 +322,7 @@ for day in [[*beets_healthy.keys()][5]]:
 
             # manually calculate euclidean distance
             metric = np.linalg.norm(healthy_1_isos-healthy_2_isos)
+            batch_healthy_list += [metric]
         print(f"saving day {day} data...")
         np.save(f'healthy_plot_isos_day_{day}.npy', np.array(healthy_1_isos))
         np.save(f'healthy_plot_diffs_day_{day}.npy', np.array(batch_healthy_list))
