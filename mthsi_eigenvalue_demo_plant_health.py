@@ -296,26 +296,56 @@ for i in range(5):
     plt.plot(healthy_1_isos/np.linalg.norm(healthy_1_isos),label='healthy 1')
     plt.plot(healthy_2_isos/np.linalg.norm(healthy_2_isos),label = 'healthy 2')
     plt.yscale('log')
+
 # %% Batch run healthy eigenvalues stats
 
 batch_healthy_list = []
-for i in range(100):
-    print(f"Beginning run {i+1}")
-    rng = np.random.default_rng()
-    indices = np.random.choice(beets_healthy['D5']['spectrum'].shape[0], size=10000, replace=False)
-    random_healthy = beets_healthy['D5']['spectrum'][indices,:]
-    healthy_1 = random_healthy[0:5000]
-    healthy_2 = random_healthy[5000::]
+for day in [[*beets_healthy.keys()][5]]:
+    if day != 'wavelengths':
+        for i in range(100):
+            if i % 10 == 0:
+                print(f"Beginning day {day} run {i+1}")
+            rng = np.random.default_rng()
+            indices = np.random.choice(beets_healthy[day]['spectrum'].shape[0], size=10000, replace=False)
+            random_healthy = beets_healthy[day]['spectrum'][indices,:]
+            healthy_1 = random_healthy[0:5000]
+            healthy_2 = random_healthy[5000::]
 
-    healthy_1_isos = eigencomp.get_iso_evs(healthy_1,10,271)
-    healthy_1_isos = healthy_1_isos/np.linalg.norm(healthy_1_isos)
-    healthy_2_isos = eigencomp.get_iso_evs(healthy_2,10,271)
-    healthy_2_isos = healthy_2_isos/np.linalg.norm(healthy_2_isos)
+            healthy_1_isos = eigencomp.get_iso_evs(healthy_1,10,271)
+            healthy_1_isos = healthy_1_isos/np.linalg.norm(healthy_1_isos)
+            healthy_2_isos = eigencomp.get_iso_evs(healthy_2,10,271)
+            healthy_2_isos = healthy_2_isos/np.linalg.norm(healthy_2_isos)
 
-    # manually calculate manhattan distance
-    metric = np.sum(abs(healthy_1_isos-healthy_2_isos))
-np.save(f'healthy_plot_isos_day_D5.npy', np.array(batch_healthy_list))
+            # manually calculate euclidean distance
+            metric = np.linalg.norm(healthy_1_isos-healthy_2_isos)
+        print(f"saving day {day} data...")
+        np.save(f'healthy_plot_isos_day_{day}.npy', np.array(healthy_1_isos))
+        np.save(f'healthy_plot_diffs_day_{day}.npy', np.array(batch_healthy_list))
 
+#%% quick sanity check for healthy vs unhealthy evs
+
+x = beets_test['plot_010']['D5']['spectrum']
+y = beets_healthy['D5']['spectrum'][0:5000]
+z = beets_healthy['D5']['spectrum'][5000:10000]
+
+x_isos = eigencomp.get_iso_evs(x,10,271)
+y_isos = eigencomp.get_iso_evs(y,10,271)
+z_isos = eigencomp.get_iso_evs(z,10,271)
+
+#%%
+x_isos = x_isos/np.linalg.norm(x_isos)
+y_isos = y_isos/np.linalg.norm(y_isos)
+z_isos = z_isos/np.linalg.norm(z_isos)
+
+plt.figure()
+plt.plot(x_isos,label='unhealthy')
+plt.plot(x_isos,label='healthy 1')
+#plt.plot(x_isos,label='healthy 2')
+plt.legend()
+plt.yscale('log')
+
+print(np.linalg.norm(x_isos-y_isos))
+print(np.linalg.norm(z_isos-y_isos))
 # %% NOT STARTED YET: plot false color images
 
 from sklearn.manifold import Isomap
