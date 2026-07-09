@@ -111,7 +111,9 @@ for plot in plots:
         plt.ylabel('Mean Reflectance Spectrum')
         plt.title(plot)
 
-#%% fix this later but not currently operational
+#%% Calculate NDVI
+
+plots = [[*beets_test.keys()][10]]
 
 avg_ndvi_list = []
 std_ndvi_list = []
