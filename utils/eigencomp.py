@@ -30,7 +30,7 @@ def sort_mthsi_df(df):
         vals_list += [vals]
     return {'Dates': date_list, 'Eigenvalues': np.array(vals_list)}
 
-def get_metrics_from_list(eigen_list,metric,mode='diff'):
+def get_metrics_from_list(eigen_list,metric,mode='diff',compare_list = None):
 
     def get_cos_sim(eigen_list_left,eigen_list_right):
         cos_vals = []
@@ -72,6 +72,11 @@ def get_metrics_from_list(eigen_list,metric,mode='diff'):
         eigen_list_right = end_array
         for i in range(len(eigen_list)-1):
             eigen_list_right = np.concatenate([eigen_list_right,end_array])
+    elif mode == 'compare':
+        eigen_list_left = eigen_list
+        eigen_list_right = compare_list[np.newaxis,:]
+        for i in range(len(eigen_list)-1):
+            eigen_list_right = np.concatenate([eigen_list_right,compare_list])
     else:
         print('Mode does not exist.')
         return None
