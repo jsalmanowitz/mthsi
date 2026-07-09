@@ -4,10 +4,11 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import matplotlib.pyplot as plt
+import h5py
+import random
 # custom code imports
 import utils.read as read
 import utils.eigencomp as eigencomp
-import h5py
 
 #%%
 
@@ -26,30 +27,41 @@ def print_structure(name, obj):
         print(f"{indent}📄 Dataset: {name} (shape={obj.shape}, dtype={obj.dtype})")
 
 # Load your file in read-only mode
-with h5py.File(disease_shots_path) as f:
+with h5py.File(healthy_shots_path) as f:
     print("📁 Root File Structure:")
     f.visititems(print_structure)
 
 #%% read-in beets data
-def readBeets(file_path):
+def readBeets(file_path,mode='unhealthy'):
     beetsData = {}
-    with h5py.File(file_path) as f:
-        beetsData['wavelengths'] = np.linspace(400,1000,272)
-        for plot in [*f['plots'].keys()]:
-            plotData = {}
-            for day in [*f['plots'][plot].keys()]:
-                spectrum = f['plots'][plot][day]['spectra'][()]
-                disease_severity = f['plots'][plot][day]['ground_truth_severity'][()]
-                cube = f['plots'][plot][day]['cube'][()]
-                mask = f['plots'][plot][day]['mask'][()]
-                plotData[day] = {
+    if mode == 'unhealthy':
+        with h5py.File(file_path) as f:
+            beetsData['wavelengths'] = np.linspace(400,1000,272)
+            for plot in [*f['plots'].keys()]:
+                plotData = {}
+                for day in [*f['plots'][plot].keys()]:
+                    spectrum = f['plots'][plot][day]['spectra'][()]
+                    disease_severity = f['plots'][plot][day]['ground_truth_severity'][()]
+                    cube = f['plots'][plot][day]['cube'][()]
+                    mask = f['plots'][plot][day]['mask'][()]
+                    plotData[day] = {
+                        'spectrum': spectrum,
+                        'disease_severity': disease_severity,
+                        'cube': cube,
+                        'mask': mask
+                    }
+                beetsData[plot] = plotData
+        return beetsData
+    elif mode == 'healthy':
+        with h5py.File(file_path) as f:
+            beetsData['wavelengths'] = np.linspace(400,1000,272)
+
+            for day in [*f['healthy'].keys()]:
+                spectrum = f['healthy'][day]['spectra'][()]
+                beetsData[day] = {
                     'spectrum': spectrum,
-                    'disease_severity': disease_severity,
-                    'cube': cube,
-                    'mask': mask
                 }
-            beetsData[plot] = plotData
-    return beetsData
+        return beetsData
 
 def getNDVI(wavelengths,spectrum):
     index860 = ((wavelengths-860) > 0).argmax()
@@ -78,6 +90,7 @@ def downsample_2d_axis(arr, axis=0, factor=4):
 
 #%%
 beets_test = readBeets(disease_shots_path)
+beets_healthy = readBeets(healthy_shots_path,mode='healthy')
 
 #%% analyze spectra of plots
 
@@ -160,6 +173,22 @@ for plot in plots:
         plt.yscale('log')
         print(f'Saving {plot}')
         np.save(f'disease_plot_isos_{plot}.npy', save_array)
+#%% save disease severity datta
+
+plots = [*beets_test.keys()] # plot 5 is pretty good
+
+for plot in plots:
+    print(f"Starting {plot}")
+    save_array = np.empty((5))
+    if plot != 'wavelengths':
+        plot_data = beets_test[plot]
+        i = 0
+        for day in [*plot_data.keys()]:
+            disease_severity = plot_data[day]['disease_severity']
+            save_array[i] =disease_severity
+            i += 1
+        print(f'Saving severity for {plot}...')
+        np.save(f'disease_severity_{plot}.npy', save_array)
 
 #%%
 diff_list = eigencomp.get_metrics_from_list(eigen_list,'euclidean',mode='diff')
@@ -235,7 +264,55 @@ for plot in plots:
             plt.yscale('log')
             plt.legend()
 
+# %% Plot healthy data to verify health status
 
+for i in range(5):
+
+    rng = np.random.default_rng()
+    indices = np.random.choice(beets_healthy['D5']['spectrum'].shape[0], size=10000, replace=False)
+    random_healthy = beets_healthy['D5']['spectrum'][indices,:]
+    healthy_1 = random_healthy[0:5000]
+    healthy_2 = random_healthy[5000::]
+    plt.figure()
+    plt.plot(np.mean(healthy_1,axis=0))
+    plt.plot(np.mean(healthy_2,axis=0))
+
+# %% Plot healthy data eigenvalues
+
+for i in range(5):
+
+    rng = np.random.default_rng()
+    indices = np.random.choice(beets_healthy['D5']['spectrum'].shape[0], size=10000, replace=False)
+    random_healthy = beets_healthy['D5']['spectrum'][indices,:]
+    healthy_1 = random_healthy[0:5000]
+    healthy_2 = random_healthy[5000::]
+
+    healthy_1_isos = eigencomp.get_iso_evs(healthy_1,10,271)
+    healthy_2_isos = eigencomp.get_iso_evs(healthy_2,10,271)
+
+    plt.figure()
+    plt.plot(healthy_1_isos/np.linalg.norm(healthy_1_isos),label='healthy 1')
+    plt.plot(healthy_2_isos/np.linalg.norm(healthy_2_isos),label = 'healthy 2')
+    plt.yscale('log')
+# %% Batch run healthy eigenvalues stats
+
+batch_healthy_list = []
+for i in range(100):
+    print(f"Beginning run {i+1}")
+    rng = np.random.default_rng()
+    indices = np.random.choice(beets_healthy['D5']['spectrum'].shape[0], size=10000, replace=False)
+    random_healthy = beets_healthy['D5']['spectrum'][indices,:]
+    healthy_1 = random_healthy[0:5000]
+    healthy_2 = random_healthy[5000::]
+
+    healthy_1_isos = eigencomp.get_iso_evs(healthy_1,10,271)
+    healthy_1_isos = healthy_1_isos/np.linalg.norm(healthy_1_isos)
+    healthy_2_isos = eigencomp.get_iso_evs(healthy_2,10,271)
+    healthy_2_isos = healthy_2_isos/np.linalg.norm(healthy_2_isos)
+
+    # manually calculate manhattan distance
+    metric = np.sum(abs(healthy_1_isos-healthy_2_isos))
+np.save(f'healthy_plot_isos_day_D5.npy', np.array(batch_healthy_list))
 
 # %% NOT STARTED YET: plot false color images
 
