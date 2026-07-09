@@ -22,4 +22,19 @@ plt.legend()
 plt.xlabel('Day')
 plt.ylabel('Difference Metric')
 plt.title('Plot 005 Manhattan Difference Over Time')
+# %% get saved disease data
+import glob
+import numpy as np
+file_path = "/home/js9002/mthsi/*disease*.npy"
+disease_files = sorted(glob.glob(file_path))
+
+d5_eigens = []
+for plot in disease_files:
+    eigens = np.load(plot)
+    eigens_D5 = eigens[4]
+    d5_eigens += [eigens_D5]
+
+
+
+
 # %%
