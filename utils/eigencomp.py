@@ -74,9 +74,10 @@ def get_metrics_from_list(eigen_list,metric,mode='diff',compare_list = None):
             eigen_list_right = np.concatenate([eigen_list_right,end_array])
     elif mode == 'compare':
         eigen_list_left = eigen_list
-        eigen_list_right = compare_list[np.newaxis,:]
+        compare_list = compare_list[:,np.newaxis]
+        eigen_list_right = compare_list
         for i in range(len(eigen_list)-1):
-            eigen_list_right = np.concatenate([eigen_list_right,compare_list])
+            eigen_list_right = np.concatenate([eigen_list_right,compare_list],axis=0)
     else:
         print('Mode does not exist.')
         return None
