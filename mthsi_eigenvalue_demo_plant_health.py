@@ -304,6 +304,7 @@ for i in range(5):
 # %% Batch run healthy eigenvalues stats
 
 for day in [[*beets_healthy.keys()][5]]:
+    save_array = np.empty((5, 2, 271))
     if day != 'wavelengths':
         batch_healthy_list = []
         for i in range(100):
@@ -326,6 +327,31 @@ for day in [[*beets_healthy.keys()][5]]:
         print(f"saving day {day} data...")
         np.save(f'healthy_plot_isos_day_{day}.npy', np.array(healthy_1_isos))
         np.save(f'healthy_plot_diffs_day_{day}.npy', np.array(batch_healthy_list))
+
+# %% Batch run healthy eigenvalues stats
+
+for day in [*beets_healthy.keys()][2:4]:
+    save_array = np.empty((100, 2, 271))
+    if day != 'wavelengths':
+        for i in range(100):
+            if i % 10 == 0:
+                print(f"Beginning day {day} run {i+1}")
+            rng = np.random.default_rng()
+            indices = np.random.choice(beets_healthy[day]['spectrum'].shape[0], size=10000, replace=False)
+            random_healthy = beets_healthy[day]['spectrum'][indices,:]
+            healthy_1 = random_healthy[0:5000]
+            healthy_2 = random_healthy[5000::]
+
+            healthy_1_isos = eigencomp.get_iso_evs(healthy_1,10,271)
+            healthy_1_isos = healthy_1_isos/np.linalg.norm(healthy_1_isos)
+            healthy_2_isos = eigencomp.get_iso_evs(healthy_2,10,271)
+            healthy_2_isos = healthy_2_isos/np.linalg.norm(healthy_2_isos)
+
+            save_array[i,0,:] = healthy_1_isos
+            save_array[i,1,:] = healthy_2_isos
+
+        print(f"saving day {day} data...")
+        np.save(f'healthy_plot_batch_isos_day_{day}.npy', save_array)
 
 #%% quick sanity check for healthy vs unhealthy evs
 
