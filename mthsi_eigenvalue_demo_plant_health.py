@@ -330,7 +330,7 @@ for day in [[*beets_healthy.keys()][5]]:
 
 # %% Batch run healthy eigenvalues stats
 
-for day in [*beets_healthy.keys()][2:4]:
+for day in [*beets_healthy.keys()][4:5]:
     save_array = np.empty((100, 2, 271))
     if day != 'wavelengths':
         for i in range(100):

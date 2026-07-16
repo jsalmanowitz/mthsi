@@ -146,3 +146,7 @@ disease_severity_plot_039.npy
 disease_severity_plot_040.npy
 healthy_plot_diffs_day_D5.npy
 healthy_plot_isos_day_D5.npy
+healthy_plot_batch_isos_day_D1.npy
+healthy_plot_batch_isos_day_D2.npy
+healthy_plot_batch_isos_day_D3.npy
+healthy_plot_batch_isos_day_D5.npy
