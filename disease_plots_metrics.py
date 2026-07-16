@@ -32,43 +32,126 @@ file_path = "/home/js9002/mthsi/*disease_plot_isos*.npy"
 disease_files = sorted(glob.glob(file_path))
 file_path_sev = "/home/js9002/mthsi/*disease_severity*.npy"
 disease_severity_files = sorted(glob.glob(file_path_sev))
-file_path_healthy = "/home/js9002/mthsi/*healthy_plot_isos*.npy"
+file_path_healthy = "/home/js9002/mthsi/*healthy_plot_batch_isos*.npy"
 healthy_files = sorted(glob.glob(file_path_healthy))
 file_path_healthy_diff  = "/home/js9002/mthsi/*healthy_plot_diff*.npy"
 healthy_diff_files = sorted(glob.glob(file_path_healthy_diff))
 #%% prepare data
-d5_baseline = np.load(healthy_files[0])
-d5_baseline = d5_baseline/np.linalg.norm(d5_baseline)
 
-d5_disease_severity = []
+index = 4
+
+baseline = np.load(healthy_files[index])[1,1,:]
+baseline = baseline/np.linalg.norm(baseline)
+
+disease_severity = []
 for plot in disease_severity_files:
     sev = np.load(plot)
-    sev_d5 = sev[4]
-    d5_disease_severity += [sev_d5]
+    sev_ind = sev[index]
+    disease_severity += [sev_ind]
 
-d5_eigens = []
+ind_eigens = []
 for plot in disease_files:
     eigens = np.load(plot)
-    eigens_D5 = eigens[4]/np.linalg.norm(eigens[4])
-    d5_eigens += [eigens_D5]
+    eigens_ind = eigens[index]/np.linalg.norm(eigens[index])
+    ind_eigens += [eigens_ind]
 
-eigen_diff = eigencomp.get_metrics_from_list(d5_eigens,'euclidean',mode='compare',compare_list=d5_baseline)
+eigen_diff = eigencomp.get_metrics_from_list(ind_eigens,'euclidean',mode='compare',compare_list=baseline)
 
-#%% generate stats
+#%% generate stats for healthy data
 
-diffs = np.load(healthy_diff_files[0])
+from scipy.optimize import curve_fit
+from scipy.special import gamma
+
+eigens_h = np.load(healthy_files[index])
+diffs = np.linalg.norm(eigens_h[:,0,:] - eigens_h[:,1,:],axis=1)
+
 mean_diff = np.mean(diffs)
 std_diff = np.std(diffs)
 
-plt.figure()
-plt.hist(diffs, bins=30)
+counts, edges = np.histogram(diffs, bins=20)
+bin_centers = (edges[:-1] + edges[1:]) / 2
 
+def folded_gaussian(x,mean,std,a):
+    numerator_1 = np.exp(-(x-mean)**2/(2*std**2))
+    numerator_2 = np.exp(-(x+mean)**2/(2*std**2))
+    denominator = std*np.sqrt(2*np.pi)
+    return a*(numerator_1+numerator_2)/denominator
+
+initial_guess = [0.02, 0.05, 10]
+popt, pcov = curve_fit(folded_gaussian, bin_centers, counts, p0=initial_guess)
+print(popt)
+print(pcov)
+
+popt_healthy = popt
+
+plt.figure()
+plt.hist(diffs, bins=20,label='measured')
+plt.plot(bin_centers, 
+         folded_gaussian(bin_centers,popt[0],popt[1],popt[2]),
+         label='model')
+plt.legend()
 
 #%%
+
+unhealthy_eigen = ind_eigens[0]
+compare_eigens = []
+for i in range(len(eigens_h)):
+    compare_eigens += [unhealthy_eigen]
+compare_eigens = np.array(compare_eigens)
+
+diffs_unhealthy = np.linalg.norm(eigens_h[:,1,:]-compare_eigens,axis=1)
+
+counts, edges = np.histogram(diffs_unhealthy, bins=20)
+bin_centers = (edges[:-1] + edges[1:]) / 2
+
+initial_guess = [0.1, 0.05, 10]
+popt, pcov = curve_fit(folded_gaussian, bin_centers, counts, p0=initial_guess)
+print(popt)
+print(pcov)
+
 plt.figure()
-plt.scatter(d5_disease_severity,eigen_diff)
-plt.axhline(mean_diff,label='healthy mean',color='red')
-plt.axhline(mean_diff+2*std_diff,label='healthy 95% CI',color='blue')
+plt.hist(diffs_unhealthy, bins=30,label='measured')
+plt.plot(bin_centers, 
+         folded_gaussian(bin_centers,popt[0],popt[1],popt[2]),
+         label='model')
+plt.legend()
+
+#%% batch stats for unhealthy eigenvalues
+
+mean_list = []
+std_list = []
+
+j = 0
+for unhealthy_eigen in ind_eigens:
+    compare_eigens = []
+    for i in range(len(eigens_h)):
+        compare_eigens += [unhealthy_eigen]
+    compare_eigens = np.array(compare_eigens)
+    diffs_unhealthy = np.linalg.norm(eigens_h[:,1,:]-compare_eigens,axis=1)
+    counts, edges = np.histogram(diffs_unhealthy, bins=20)
+    bin_centers = (edges[:-1] + edges[1:]) / 2
+    initial_guess = [0.14, 0.03, 20]
+    popt, pcov = curve_fit(folded_gaussian, bin_centers, counts, p0=initial_guess,maxfev=1000)
+    mean_list += [abs(popt[0])]
+    std_list += [abs(popt[1])]
+    j += 1
+
+std_list = np.array(std_list)
+#%%
+plt.figure()
+plt.scatter(disease_severity,eigen_diff)
+plt.axhline(popt_healthy[0],label='healthy mean',color='red')
+plt.axhline(popt_healthy[0]+2*popt_healthy[1],label='healthy 95% CI',color='blue')
+plt.xlabel('Disease Severity %')
+plt.ylabel('Euclidean Distance')
+plt.legend()
+
+# %%
+
+plt.figure()
+plt.errorbar(disease_severity, mean_list, yerr=2*std_list, fmt='o', capsize=5)
+plt.axhline(popt_healthy[0],label='healthy mean',color='red')
+plt.axhline(popt_healthy[0]+2*popt_healthy[1],label='healthy 95% CI',color='blue')
 plt.xlabel('Disease Severity %')
 plt.ylabel('Euclidean Distance')
 plt.legend()
